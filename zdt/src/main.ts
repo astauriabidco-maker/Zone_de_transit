@@ -10,10 +10,10 @@ async function bootstrap() {
   app.use(cookieParser());
 
   // CORS configuré selon l'environnement
-  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+  // const frontendUrl = 'http://localhost:5173';
 
   app.enableCors({
-    origin: frontendUrl,
+    origin: 'http://localhost:5173',
     credentials: true, // ← autorise les cookies
   });
 

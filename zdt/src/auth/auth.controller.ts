@@ -2,6 +2,10 @@
 import {
     Body,
     Controller,
+    Get,
+    UseGuards,
+    Request,
+    HttpCode,
     Post,
     Res,
     HttpStatus,
@@ -9,6 +13,7 @@ import {
 } from '@nestjs/common';
 import type { Response } from 'express';
 import { AuthService } from './auth.service';
+import { JwtAuthGuard } from './jwt-auth.guard';
 
 @Controller('auth')
 export class AuthController {
@@ -29,11 +34,10 @@ export class AuthController {
             // 🔒 Configuration du cookie sécurisé
             const cookieOptions = {
                 httpOnly: true,
-                secure: process.env.NODE_ENV === 'production', // HTTPS requis en prod
-                sameSite: 'strict' as const,
-                maxAge: 24 * 60 * 60 * 1000, // 1 jour
-                path: '/',
-                domain: process.env.COOKIE_DOMAIN || undefined, // ex: .transit-logistics.com
+                secure: false, // OBLIGATOIRE en http
+                sameSite: 'lax' as const, // ⬅️ important
+                maxAge: 24 * 60 * 60 * 1000,
+                path: '/'
             };
 
             res.cookie('access_token', accessToken, cookieOptions);
@@ -49,12 +53,19 @@ export class AuthController {
     logout(@Res({ passthrough: true }) res: Response) {
         res.clearCookie('access_token', {
             httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'strict',
-            path: '/',
-            domain: process.env.COOKIE_DOMAIN || undefined,
+            secure: false, // OBLIGATOIRE en http
+            sameSite: 'lax' as const, // ⬅️ important
+            path: '/'
         });
         return { success: true };
+    }
+
+    @Get('profile')
+    @UseGuards(JwtAuthGuard)
+    @HttpCode(HttpStatus.OK)
+    getProfile(@Request() req) {
+        // Le guard a déjà vérifié le token et attaché `user` à la requête
+        return { user: req.user };
     }
 
 }
