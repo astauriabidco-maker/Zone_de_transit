@@ -1,0 +1,172 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ======================
+// EMPLOYÉS (rôles internes)
+// ======================
+
+model Employee {
+  id        String       @id @default(uuid())
+  email     String       @unique
+  password  String // obligatoire pour les employés
+  firstName String
+  lastName  String
+  role      EmployeeRole
+  phone     String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations vers les colis selon le rôle
+  pickedParcels     Parcel[]      @relation("Picker")
+  loadedParcels     Parcel[]      @relation("Loader")
+  unloadedParcels   Parcel[]      @relation("WarehouseAgent")
+  deliveredParcels  Parcel[]      @relation("Driver")
+  supervisedParcels Parcel[]      @relation("Supervisor")
+  parcelEvents      ParcelEvent[]
+
+  @@map("employees")
+}
+
+enum EmployeeRole {
+  PICKER // Enleveur
+  LOADER // Chargeur
+  WAREHOUSE // Agent entrepôt
+  DRIVER // Livreur
+  SUPERVISOR
+}
+
+// ======================
+// CLIENTS (externes)
+// ======================
+
+model Client {
+  id        String  @id @default(uuid())
+  email     String  @unique
+  firstName String?
+  lastName  String?
+  company   String?
+  phone     String?
+  address   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  parcels Parcel[]
+
+  @@map("clients")
+}
+
+// ======================
+// COLIS & WORKFLOW
+// ======================
+
+model Parcel {
+  id            String       @id @default(uuid())
+  status        ParcelStatus @default(DRAFT)
+  declaredValue Float?
+  insured       Boolean      @default(false)
+  destination   String
+  containerId   String?
+  container     Container?   @relation(fields: [containerId], references: [id])
+
+  // 🔗 Liens vers les acteurs
+  clientId String
+  client   Client @relation(fields: [clientId], references: [id])
+
+  pickerId String?
+  picker   Employee? @relation("Picker", fields: [pickerId], references: [id])
+
+  loaderId String?
+  loader   Employee? @relation("Loader", fields: [loaderId], references: [id])
+
+  warehouseAgentId String?
+  warehouseAgent   Employee? @relation("WarehouseAgent", fields: [warehouseAgentId], references: [id])
+
+  driverId String?
+  driver   Employee? @relation("Driver", fields: [driverId], references: [id])
+
+  supervisorId String?
+  supervisor   Employee? @relation("Supervisor", fields: [supervisorId], references: [id])
+
+  // Preuves associées
+  events ParcelEvent[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("parcels")
+}
+
+enum ParcelStatus {
+  DRAFT
+  PICKED
+  QUOTE_SIGNED
+  LOADED
+  CONTAINER_CLOSED
+  UNLOADED
+  IN_DISTRIBUTION
+  DELIVERED
+}
+
+// ======================
+// CONTENEURS
+// ======================
+
+model Container {
+  id       String    @id @default(uuid())
+  name     String    @unique
+  closed   Boolean   @default(false)
+  closedAt DateTime?
+
+  parcels   Parcel[]
+  createdAt DateTime @default(now())
+
+  @@map("containers")
+}
+
+// ======================
+// TRAÇABILITÉ JURIDIQUE
+// ======================
+
+model ParcelEvent {
+  id        String    @id @default(uuid())
+  parcelId  String
+  parcel    Parcel    @relation(fields: [parcelId], references: [id])
+  eventType EventType
+
+  // 🔹 L'événement peut être déclenché par un employé OU un système (ex: paiement auto)
+  employeeId String?
+  employee   Employee? @relation(fields: [employeeId], references: [id])
+
+  // (On ne trace pas d'événement client ici, sauf signature → gérée via lien)
+  videoUrl     String?
+  signatureUrl String?
+  comment      String?
+  metadata     Json? // GPS, device, timestamp horodaté, etc.
+
+  occurredAt DateTime @default(now())
+
+  @@map("parcel_events")
+}
+
+enum EventType {
+  PICKED
+  VIDEO_UPLOADED
+  CONTRACT_SIGNED
+  SCANNED
+  LOADED
+  CONTAINER_CLOSED
+  UNLOADED
+  DISTRIBUTION_STARTED
+  DELIVERED
+  PAYMENT_VERIFIED
+}
