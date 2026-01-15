@@ -3,7 +3,10 @@ import { Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthProvider';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
+import ClientsPage from './pages/ClientsPages';
 import ProtectedRoute from './components/ProtectedRoute';
+import MainLayout from './layouts/MainLayout';
+
 
 function App() {
   return (
@@ -11,7 +14,11 @@ function App() {
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route element={<ProtectedRoute />}>
-          <Route path="/dashboard" element={<DashboardPage />} />
+          <Route element={<MainLayout />}>
+            <Route path="/dashboard" element={<DashboardPage />} />
+            <Route path="/clients" element={<ClientsPage />} />
+            {/* Ajoutez les autres routes ici */}
+          </Route>
         </Route>
         <Route path="*" element={<LoginPage />} />
       </Routes>
