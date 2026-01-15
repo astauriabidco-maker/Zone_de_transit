@@ -6,6 +6,7 @@ import {
     Body,
     HttpStatus,
     HttpCode,
+    Param,
 } from '@nestjs/common';
 import { ClientService } from './client.service';
 import { CreateClientDto } from './dto/create-client.dto';
@@ -18,6 +19,12 @@ export class ClientController {
     @HttpCode(HttpStatus.OK)
     findAll() {
         return this.clientService.findAll();
+    }
+
+    @Get(':id')
+    @HttpCode(HttpStatus.OK)
+    findOne(@Param('id') id: string) {
+        return this.clientService.findOne(id);
     }
 
     @Post()

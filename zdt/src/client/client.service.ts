@@ -33,4 +33,22 @@ export class ClientService {
             },
         });
     }
+
+    async findOne(id: string) {
+        return this.prisma.client.findUnique({
+            where: { id },
+            select: {
+                id: true,
+                email: true,
+                firstName: true,
+                lastName: true,
+                company: true,
+                phone: true,
+                address: true,
+                createdAt: true,
+                // Tu peux aussi charger les colis si besoin :
+                // parcels: true,
+            },
+        });
+    }
 }

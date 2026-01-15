@@ -2,8 +2,11 @@
 import React, { useState } from 'react';
 import type { Client } from '../types/client';
 import { useClients } from '../hooks/useClients';
+import { useNavigate } from 'react-router-dom';
+
 
 export default function ClientsPage() {
+    const navigate = useNavigate();
     const { clients, loading, error, addClient } = useClients();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [formData, setFormData] = useState<Omit<Client, 'id'>>({
@@ -86,7 +89,12 @@ export default function ClientsPage() {
                         {clients.map((client) => (
                             <tr key={client.id} style={styles.tableRow}>
                                 {/* Affichage combiné : Prénom + Nom */}
-                                <td style={styles.td}>{client.firstName} {client.lastName}</td>
+                                <td style={styles.td}>
+                                    <span onClick={() => navigate(`/clients/${client.id}`)} style={{ color: '#1e88e5', cursor: 'pointer', fontWeight: '600' }}>
+                                        {client.firstName} {client.lastName}
+                                    </span>
+
+                                </td>
                                 <td style={styles.td}>{client.email}</td>
                                 <td style={styles.td}>{client.activeParcels}</td>
                                 <td style={styles.td}>{client.lastOperation}</td>

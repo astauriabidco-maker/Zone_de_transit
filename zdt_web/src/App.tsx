@@ -6,7 +6,7 @@ import DashboardPage from './pages/DashboardPage';
 import ClientsPage from './pages/ClientsPages';
 import ProtectedRoute from './components/ProtectedRoute';
 import MainLayout from './layouts/MainLayout';
-
+import ClientDetailPage from './pages/ClientDetailPage';
 
 function App() {
   return (
@@ -17,6 +17,7 @@ function App() {
           <Route element={<MainLayout />}>
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/clients" element={<ClientsPage />} />
+            <Route path="/clients/:id" element={<ClientDetailPage />} />
             {/* Ajoutez les autres routes ici */}
           </Route>
         </Route>
