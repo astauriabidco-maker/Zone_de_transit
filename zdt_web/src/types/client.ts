@@ -6,4 +6,7 @@ export interface Client {
     email: string;
     activeParcels: number;
     lastOperation: string; // format YYYY-MM-DD
+    address: string;
+    company: string;
+    phone: string;
 }

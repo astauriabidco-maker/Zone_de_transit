@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import type { Client } from '../types/client';
 import { useClients } from '../hooks/useClients';
 import { useNavigate } from 'react-router-dom';
+import api from '../lib/api';
 
 
 export default function ClientsPage() {
@@ -15,16 +16,34 @@ export default function ClientsPage() {
         email: '',
         activeParcels: 0,
         lastOperation: new Date().toISOString().split('T')[0],
+        address: '',
+        company: '',
+        phone: '',
     });
     const [submitError, setSubmitError] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+    const [editingClient, setEditingClient] = useState<Client | null>(null);
+    const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
         setFormData(prev => ({
             ...prev,
             [name]: name === 'activeParcels' ? Number(value) : value
         }));
+    };
+
+    const confirmDelete = async () => {
+        if (!deleteConfirmId) return;
+        try {
+            await api.delete(`/clients/${deleteConfirmId}`);
+            // Rafraîchit la page (à améliorer plus tard avec useClients)
+            window.location.reload();
+        } catch (err) {
+            alert('Erreur lors de la suppression');
+            setDeleteConfirmId(null);
+        }
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -41,6 +60,9 @@ export default function ClientsPage() {
                 email: '',
                 activeParcels: 0,
                 lastOperation: new Date().toISOString().split('T')[0],
+                address: '',
+                company: '',
+                phone: '',
             });
         } catch (err: any) {
             setSubmitError(err.message);
@@ -98,8 +120,40 @@ export default function ClientsPage() {
                                 <td style={styles.td}>{client.email}</td>
                                 <td style={styles.td}>{client.activeParcels}</td>
                                 <td style={styles.td}>{client.lastOperation}</td>
-                                <td style={styles.td}>
-                                    <span style={{ cursor: 'pointer', fontSize: '18px' }}>⋮</span>
+                                <td style={{ ...styles.td, padding: '8px' }}>
+                                    <div style={{ position: 'relative', display: 'flex', justifyContent: 'flex-end' }}>
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setOpenMenuId(client.id === openMenuId ? null : client.id);
+                                            }}
+                                            style={styles.menuButton}
+                                        >
+                                            ⋮
+                                        </button>
+                                        {openMenuId === client.id && (
+                                            <div style={styles.menuDropdown}>
+                                                <button
+                                                    onClick={() => {
+                                                        setEditingClient(client);
+                                                        setOpenMenuId(null);
+                                                    }}
+                                                    style={styles.menuItem}
+                                                >
+                                                    ✏️ Modifier
+                                                </button>
+                                                <button
+                                                    onClick={() => {
+                                                        setDeleteConfirmId(client.id);
+                                                        setOpenMenuId(null);
+                                                    }}
+                                                    style={{ ...styles.menuItem, color: '#ef4444' }}
+                                                >
+                                                    🗑️ Supprimer
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
                                 </td>
                             </tr>
                         ))}
@@ -151,6 +205,17 @@ export default function ClientsPage() {
                             </div>
 
                             <div style={{ marginBottom: '16px' }}>
+                                <label style={styles.label}>Nom de société</label>
+                                <input
+                                    type="text"
+                                    name="company"
+                                    value={formData.company}
+                                    onChange={handleInputChange}
+                                    style={styles.input}
+                                />
+                            </div>
+
+                            <div style={{ marginBottom: '16px' }}>
                                 <label style={styles.label}>Email</label>
                                 <input
                                     type="email"
@@ -162,6 +227,31 @@ export default function ClientsPage() {
                                 />
                             </div>
 
+                            <div style={{ marginBottom: '16px' }}>
+                                <label style={styles.label}>Téléphone</label>
+                                <input
+                                    type="tel"
+                                    name="phone"
+                                    value={formData.phone}
+                                    onChange={handleInputChange}
+                                    style={styles.input}
+                                />
+                            </div>
+
+                            <div style={{ marginBottom: '16px' }}>
+                                <label style={styles.label}>Adresse</label>
+                                <textarea
+                                    name="address"
+                                    value={formData.address}
+                                    onChange={handleInputChange}
+                                    placeholder="Ex: 10 Rue de la Paix, 75002 Paris"
+                                    style={{
+                                        ...styles.input,
+                                        height: '80px',
+                                        resize: 'vertical' as const,
+                                    }}
+                                />
+                            </div>
                             <div style={{ marginBottom: '16px' }}>
                                 <label style={styles.label}>Colis actifs</label>
                                 <input
@@ -205,12 +295,158 @@ export default function ClientsPage() {
                     </div>
                 </div>
             )}
+
+            {/* Modal de confirmation de suppression */}
+            {deleteConfirmId && (
+                <div style={styles.modalOverlay}>
+                    <div style={styles.confirmModal}>
+                        <h3 style={{ margin: 0 }}>Confirmer la suppression</h3>
+                        <p>Êtes-vous sûr de vouloir supprimer ce client ? Cette action est irréversible.</p>
+                        <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '20px' }}>
+                            <button
+                                onClick={() => setDeleteConfirmId(null)}
+                                style={styles.cancelButton}
+                            >
+                                Annuler
+                            </button>
+                            <button
+                                onClick={confirmDelete}
+                                style={{ ...styles.addButton, padding: '8px 16px' }}
+                            >
+                                Supprimer
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal d'édition */}
+            {editingClient && (
+                <div style={styles.modalOverlay}>
+                    <div style={styles.modal}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                            <h3 style={{ fontSize: '18px', fontWeight: '600' }}>Modifier le client</h3>
+                            <button
+                                onClick={() => setEditingClient(null)}
+                                style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer' }}
+                            >
+                                ✕
+                            </button>
+                        </div>
+
+                        <form onSubmit={(e) => {
+                            e.preventDefault();
+                            // À implémenter plus tard
+                            alert('Fonctionnalité d\'édition à compléter');
+                            setEditingClient(null);
+                        }}>
+                            <div style={{ marginBottom: '16px' }}>
+                                <label style={styles.label}>Prénom</label>
+                                <input
+                                    type="text"
+                                    value={editingClient.firstName || ''}
+                                    onChange={(e) => setEditingClient({ ...editingClient, firstName: e.target.value })}
+                                    required
+                                    style={styles.input}
+                                />
+                            </div>
+
+                            <div style={{ marginBottom: '16px' }}>
+                                <label style={styles.label}>Nom</label>
+                                <input
+                                    type="text"
+                                    value={editingClient.lastName || ''}
+                                    onChange={(e) => setEditingClient({ ...editingClient, lastName: e.target.value })}
+                                    required
+                                    style={styles.input}
+                                />
+                            </div>
+
+                            <div style={{ marginBottom: '16px' }}>
+                                <label style={styles.label}>Email</label>
+                                <input
+                                    type="email"
+                                    value={editingClient.email}
+                                    onChange={(e) => setEditingClient({ ...editingClient, email: e.target.value })}
+                                    required
+                                    style={styles.input}
+                                />
+                            </div>
+
+                            <div style={{ marginBottom: '16px' }}>
+                                <label style={styles.label}>Adresse</label>
+                                <textarea
+                                    value={editingClient.address}
+                                    onChange={(e) => setEditingClient({ ...editingClient, address: e.target.value })}
+                                    style={{ ...styles.input, height: '80px' }}
+                                />
+                            </div>
+
+                            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                                <button
+                                    type="button"
+                                    onClick={() => setEditingClient(null)}
+                                    style={styles.cancelButton}
+                                >
+                                    Annuler
+                                </button>
+                                <button
+                                    type="submit"
+                                    style={{ ...styles.addButton, padding: '10px 20px' }}
+                                >
+                                    Enregistrer
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
 
 // Styles inchangés (identiques à votre version)
 const styles = {
+
+    menuButton: {
+        background: 'none',
+        border: 'none',
+        fontSize: '18px',
+        cursor: 'pointer',
+        padding: '4px',
+    } as const,
+
+    menuDropdown: {
+        position: 'absolute',
+        top: '24px',
+        right: '0',
+        backgroundColor: 'white',
+        border: '1px solid #cbd5e1',
+        borderRadius: '8px',
+        boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+        width: '160px',
+        zIndex: 1000,
+    } as const,
+
+    menuItem: {
+        width: '100%',
+        padding: '10px 16px',
+        textAlign: 'left',
+        background: 'none',
+        border: 'none',
+        cursor: 'pointer',
+        fontSize: '14px',
+        color: '#1e293b',
+    } as const,
+
+    confirmModal: {
+        backgroundColor: 'white',
+        borderRadius: '12px',
+        padding: '24px',
+        width: '400px',
+        maxWidth: '90vw',
+    } as const,
+
     exportButton: {
         padding: '8px 16px',
         backgroundColor: 'white',

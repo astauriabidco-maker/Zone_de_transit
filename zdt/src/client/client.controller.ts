@@ -7,6 +7,8 @@ import {
     HttpStatus,
     HttpCode,
     Param,
+    Put,
+    Delete,
 } from '@nestjs/common';
 import { ClientService } from './client.service';
 import { CreateClientDto } from './dto/create-client.dto';
@@ -32,4 +34,14 @@ export class ClientController {
     create(@Body() createClientDto: CreateClientDto) {
         return this.clientService.create(createClientDto);
     }
-}
+
+    @Put(':id')
+    update(@Param('id') id: string, @Body() updateData: any) {
+        return this.clientService.update(id, updateData);
+    }
+
+    @Delete(':id')
+    remove(@Param('id') id: string) {
+        return this.clientService.remove(id);
+    }
+}   

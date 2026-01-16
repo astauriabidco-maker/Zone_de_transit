@@ -21,15 +21,16 @@ export class ClientService {
     }
 
     async create(createClientDto: CreateClientDto) {
-        const { firstName, lastName, email, company, phone } = createClientDto;
+        const { firstName, lastName, email, company, phone, address } = createClientDto;
 
         return this.prisma.client.create({
             data: {
                 email,
                 firstName,
                 lastName,
-                company: null, // ou tu peux extraire le nom de société si besoin
-                phone: null,
+                company: company || null, // ou tu peux extraire le nom de société si besoin
+                phone: phone || null,
+                address: address || null,
             },
         });
     }
@@ -49,6 +50,28 @@ export class ClientService {
                 // Tu peux aussi charger les colis si besoin :
                 // parcels: true,
             },
+        });
+    }
+
+    async update(id: string, updateData: any) {
+        const { firstName, lastName, email, company, phone, address } = updateData;
+
+        return this.prisma.client.update({
+            where: { id },
+            data: {
+                email,
+                firstName,
+                lastName,
+                address: address || null,
+                company: company || null,
+                phone: phone || null,
+            },
+        });
+    }
+
+    async remove(id: string) {
+        return this.prisma.client.delete({
+            where: { id },
         });
     }
 }
