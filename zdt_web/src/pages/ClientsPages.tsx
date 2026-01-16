@@ -1,5 +1,5 @@
 // src/pages/ClientsPage.tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import type { Client } from '../types/client';
 import { useClients } from '../hooks/useClients';
 import { useNavigate } from 'react-router-dom';
@@ -22,9 +22,26 @@ export default function ClientsPage() {
     });
     const [submitError, setSubmitError] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+    const [menuPosition, setMenuPosition] = useState<{ id: string; x: number; y: number } | null>(null);
     const [editingClient, setEditingClient] = useState<Client | null>(null);
     const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+
+    // Ferme le menu si on clique en dehors
+    useEffect(() => {
+        const handleClickOutside = () => {
+            if (menuPosition) {
+                setMenuPosition(null);
+            }
+        };
+
+        if (menuPosition) {
+            document.addEventListener('click', handleClickOutside);
+        }
+
+        return () => {
+            document.removeEventListener('click', handleClickOutside);
+        };
+    }, [menuPosition]);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
@@ -131,18 +148,31 @@ export default function ClientsPage() {
                                         <button
                                             onClick={(e) => {
                                                 e.stopPropagation();
-                                                setOpenMenuId(client.id === openMenuId ? null : client.id);
+                                                // Affiche le menu juste en dessous du bouton
+                                                const rect = e.currentTarget.getBoundingClientRect();
+                                                setMenuPosition({
+                                                    id: client.id,
+                                                    x: rect.left,
+                                                    y: rect.bottom + window.scrollY,
+                                                });
                                             }}
                                             style={styles.menuButton}
                                         >
                                             ⋮
                                         </button>
-                                        {openMenuId === client.id && (
-                                            <div style={styles.menuDropdown}>
+                                        {menuPosition?.id === client.id && (
+                                            <div
+                                                style={{
+                                                    ...styles.menuDropdown,
+                                                    top: `${menuPosition.y}px`,
+                                                    left: `${menuPosition.x}px`,
+                                                    zIndex: 1001,
+                                                }}
+                                            >
                                                 <button
                                                     onClick={() => {
                                                         setEditingClient(client);
-                                                        setOpenMenuId(null);
+                                                        setMenuPosition(null);
                                                     }}
                                                     style={styles.menuItem}
                                                 >
@@ -151,7 +181,7 @@ export default function ClientsPage() {
                                                 <button
                                                     onClick={() => {
                                                         setDeleteConfirmId(client.id);
-                                                        setOpenMenuId(null);
+                                                        setMenuPosition(null);
                                                     }}
                                                     style={{ ...styles.menuItem, color: '#ef4444' }}
                                                 >
@@ -435,9 +465,6 @@ const styles = {
     } as const,
 
     menuDropdown: {
-        position: 'absolute',
-        top: '24px',
-        right: '0',
         backgroundColor: 'white',
         border: '1px solid #cbd5e1',
         borderRadius: '8px',
