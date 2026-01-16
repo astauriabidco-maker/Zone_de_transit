@@ -8,6 +8,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import MainLayout from './layouts/MainLayout';
 import ClientDetailPage from './pages/ClientDetailPage';
 import ContainersPage from './pages/ContainersPage';
+import ContainerDetailPage from './pages/ContainerDetailPage';
 function App() {
   return (
     <AuthProvider>
@@ -19,6 +20,7 @@ function App() {
             <Route path="/clients" element={<ClientsPage />} />
             <Route path="/clients/:id" element={<ClientDetailPage />} />
             <Route path="/containers" element={<ContainersPage />} />
+            <Route path="/containers/:id" element={<ContainerDetailPage />} />
             {/* Ajoutez les autres routes ici */}
           </Route>
         </Route>

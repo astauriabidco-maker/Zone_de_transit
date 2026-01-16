@@ -88,4 +88,22 @@ export class ContainerService {
             where: { id },
         });
     }
+
+    async findOne(id: string) {
+        return this.prisma.container.findUnique({
+            where: { id },
+            include: {
+                parcels: {
+                    select: {
+                        id: true,
+                        status: true,
+                        destination: true,
+                        client: {
+                            select: { firstName: true, lastName: true, company: true },
+                        },
+                    },
+                },
+            },
+        });
+    }
 }

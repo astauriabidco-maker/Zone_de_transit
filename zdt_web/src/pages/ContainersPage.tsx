@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { useContainers } from '../hooks/useContainers';
 import type { Container } from '../types/container';
+import { useNavigate } from 'react-router-dom';
 
 // Labels lisibles pour les statuts
 const LOADING_STATUS_LABELS: Record<Container['loadingStatus'], string> = {
@@ -36,6 +37,7 @@ export default function ContainersPage() {
     });
     const [submitError, setSubmitError] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const navigate = useNavigate();
 
     // Ferme le menu si on clique en dehors
     useEffect(() => {
@@ -137,7 +139,14 @@ export default function ContainersPage() {
                     <tbody>
                         {containers.map((container) => (
                             <tr key={container.id} style={styles.tableRow}>
-                                <td style={styles.td}>{container.name}</td>
+                                <td style={{ ...styles.td, padding: '16px 24px' }}>
+                                    <span
+                                        onClick={() => navigate(`/containers/${container.id}`)}
+                                        style={{ color: '#1e88e5', cursor: 'pointer', fontWeight: '600' }}
+                                    >
+                                        {container.name}
+                                    </span>
+                                </td>
                                 <td style={styles.td}>{container.departureDate || '—'}</td>
                                 <td style={styles.td}>{container.arrivalDate || '—'}</td>
                                 <td style={styles.td}>{LOADING_STATUS_LABELS[container.loadingStatus]}</td>

@@ -13,3 +13,16 @@ export interface Container {
     closed: boolean;
     createdAt: string;
 }
+
+export type ContainerWithParcels = Container & {
+    parcels: {
+        id: string;
+        status: string;
+        destination: string;
+        client: {
+            firstName: string | null;
+            lastName: string | null;
+            company: string | null;
+        } | null;
+    }[];
+};

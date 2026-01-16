@@ -31,4 +31,9 @@ export class ContainerController {
     remove(@Param('id') id: string) {
         return this.containerService.remove(id);
     }
+
+    @Get(':id')
+    findOne(@Param('id') id: string) {
+        return this.containerService.findOne(id);
+    }
 }
