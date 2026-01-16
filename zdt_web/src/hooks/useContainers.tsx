@@ -1,7 +1,7 @@
 // src/hooks/useContainers.tsx
 import { useState, useEffect } from 'react';
 import api from '../lib/api';
-import type { Container } from '../types/container';
+import type { Container, ContainerCreateInput } from '../types/container';
 
 export function useContainers() {
     const [containers, setContainers] = useState<Container[]>([]);
@@ -19,7 +19,7 @@ export function useContainers() {
         }
     };
 
-    const addContainer = async (data: Omit<Container, 'id' | 'closed' | 'createdAt'>) => {
+    const addContainer = async (data: ContainerCreateInput) => {
         try {
             await api.post('/containers', data);
             await fetchContainers();
@@ -28,9 +28,14 @@ export function useContainers() {
         }
     };
 
+    const getNextName = async (): Promise<string> => {
+        const response = await api.get('/containers/next-name');
+        return response.data;
+    };
+
     useEffect(() => {
         fetchContainers();
     }, []);
 
-    return { containers, loading, error, addContainer };
+    return { containers, loading, error, addContainer, getNextName };
 }

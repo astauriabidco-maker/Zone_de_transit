@@ -1,5 +1,5 @@
 // src/container/container.service.ts
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateContainerDto } from './dto/create-container.dto';
 
@@ -13,8 +13,32 @@ export class ContainerService {
         });
     }
 
+    // src/container/container.service.ts
     async create(createContainerDto: CreateContainerDto) {
-        const { name, departureDate, arrivalDate, loadingStatus, unloadingStatus } = createContainerDto;
+        // Récupère le dernier conteneur par ordre décroissant de création
+        const lastContainer = await this.prisma.container.findFirst({
+            orderBy: { createdAt: 'desc' },
+            select: { name: true },
+        });
+
+        let nextNumber = 1;
+        if (lastContainer) {
+            // Extrait le numéro du nom (ex: "CONT-005" → 5)
+            const match = lastContainer.name.match(/^CONT-(\d+)$/);
+            if (match) {
+                nextNumber = parseInt(match[1], 10) + 1;
+            }
+        }
+
+        const name = `CONT-${nextNumber.toString().padStart(3, '0')}`;
+
+        // Vérifie que le nom n'existe pas déjà
+        const existing = await this.prisma.container.findUnique({ where: { name } });
+        if (existing) {
+            throw new BadRequestException('Ce nom de conteneur existe déjà');
+        }
+
+        const { departureDate, arrivalDate, loadingStatus, unloadingStatus } = createContainerDto;
 
         return this.prisma.container.create({
             data: {
@@ -25,5 +49,22 @@ export class ContainerService {
                 unloadingStatus: unloadingStatus || 'UNKNOWN',
             },
         });
+    }
+
+    async getNextName() {
+        const lastContainer = await this.prisma.container.findFirst({
+            orderBy: { createdAt: 'desc' },
+            select: { name: true },
+        });
+
+        let nextNumber = 1;
+        if (lastContainer) {
+            const match = lastContainer.name.match(/^CONT-(\d+)$/);
+            if (match) {
+                nextNumber = parseInt(match[1], 10) + 1;
+            }
+        }
+
+        return `CONT-${nextNumber.toString().padStart(3, '0')}`;
     }
 }

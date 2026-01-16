@@ -1,5 +1,5 @@
 // src/pages/ContainersPage.tsx
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useContainers } from '../hooks/useContainers';
 import type { Container } from '../types/container';
 
@@ -21,7 +21,8 @@ const UNLOADING_STATUS_LABELS: Record<Container['unloadingStatus'], string> = {
 };
 
 export default function ContainersPage() {
-    const { containers, loading, error, addContainer } = useContainers();
+    const { containers, loading, error, addContainer, getNextName } = useContainers();
+    const [initialName, setInitialName] = useState('');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [formData, setFormData] = useState<Omit<Container, 'id' | 'closed' | 'createdAt'>>({
         name: '',
@@ -59,6 +60,22 @@ export default function ContainersPage() {
             setIsSubmitting(false);
         }
     };
+
+    useEffect(() => {
+        const loadNextName = async () => {
+            try {
+                const name = await getNextName();
+                setInitialName(name);
+                setFormData(prev => ({ ...prev, name }));
+            } catch (err) {
+                console.error('Erreur chargement nom:', err);
+                setInitialName('CONT-001');
+                setFormData(prev => ({ ...prev, name: 'CONT-001' }));
+            }
+        };
+
+        loadNextName();
+    }, [getNextName]);
 
     if (loading) {
         return <div style={styles.centered}>Chargement des conteneurs...</div>;
@@ -140,7 +157,6 @@ export default function ContainersPage() {
                                     style={styles.input}
                                 />
                             </div>
-
                             <div style={{ marginBottom: '16px' }}>
                                 <label style={styles.label}>Date de départ prévue</label>
                                 <input

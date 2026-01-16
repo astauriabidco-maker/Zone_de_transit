@@ -16,4 +16,9 @@ export class ContainerController {
     create(@Body() createContainerDto: CreateContainerDto) {
         return this.containerService.create(createContainerDto);
     }
+
+    @Get('next-name')
+    getNextName() {
+        return this.containerService.getNextName();
+    }
 }
