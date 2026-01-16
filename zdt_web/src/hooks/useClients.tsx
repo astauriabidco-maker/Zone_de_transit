@@ -37,9 +37,27 @@ export function useClients() {
         }
     };
 
+    const updateClient = async (id: string, clientData: Partial<Client>) => {
+        try {
+            await api.put(`/clients/${id}`, clientData);
+            await fetchClients();
+        } catch (err: any) {
+            throw new Error(err.response?.data?.message || 'Erreur lors de la modification');
+        }
+    };
+
+    const deleteClient = async (id: string) => {
+        try {
+            await api.delete(`/clients/${id}`);
+            await fetchClients();
+        } catch (err: any) {
+            throw new Error(err.response?.data?.message || 'Erreur lors de la suppression');
+        }
+    };
+
     useEffect(() => {
         fetchClients();
     }, []);
 
-    return { clients, loading, error, addClient };
+    return { clients, loading, error, addClient, updateClient, deleteClient };
 }

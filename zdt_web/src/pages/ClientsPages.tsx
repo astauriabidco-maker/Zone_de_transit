@@ -8,7 +8,7 @@ import api from '../lib/api';
 
 export default function ClientsPage() {
     const navigate = useNavigate();
-    const { clients, loading, error, addClient } = useClients();
+    const { clients, loading, error, addClient, updateClient, deleteClient } = useClients();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [formData, setFormData] = useState<Omit<Client, 'id'>>({
         firstName: '',
@@ -34,18 +34,24 @@ export default function ClientsPage() {
         }));
     };
 
-    const confirmDelete = async () => {
-        if (!deleteConfirmId) return;
-        try {
-            await api.delete(`/clients/${deleteConfirmId}`);
-            // Rafraîchit la page (à améliorer plus tard avec useClients)
-            window.location.reload();
-        } catch (err) {
-            alert('Erreur lors de la suppression');
+    const confirmDelete = () => {
+        if (deleteConfirmId) {
+            deleteClient(deleteConfirmId);
             setDeleteConfirmId(null);
         }
     };
 
+    const handleEditSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!editingClient) return;
+
+        try {
+            await updateClient(editingClient.id, editingClient);
+            setEditingClient(null);
+        } catch (err: any) {
+            setSubmitError(err.message);
+        }
+    };
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setSubmitError(null);
@@ -334,11 +340,23 @@ export default function ClientsPage() {
                             </button>
                         </div>
 
-                        <form onSubmit={(e) => {
-                            e.preventDefault();
-                            // À implémenter plus tard
-                            alert('Fonctionnalité d\'édition à compléter');
-                            setEditingClient(null);
+                        <form onSubmit={(handleEditSubmit) => {
+                            handleEditSubmit.preventDefault();
+                            if (!editingClient) return;
+
+                            // Validation côté client
+                            if (!editingClient.firstName.trim() || !editingClient.lastName.trim()) {
+                                alert('Prénom et nom sont requis');
+                                return;
+                            }
+
+                            updateClient(editingClient.id, editingClient)
+                                .then(() => {
+                                    setEditingClient(null);
+                                })
+                                .catch((err: any) => {
+                                    alert(err.message);
+                                });
                         }}>
                             <div style={{ marginBottom: '16px' }}>
                                 <label style={styles.label}>Prénom</label>
@@ -376,7 +394,7 @@ export default function ClientsPage() {
                             <div style={{ marginBottom: '16px' }}>
                                 <label style={styles.label}>Adresse</label>
                                 <textarea
-                                    value={editingClient.address}
+                                    value={editingClient.address || ''}
                                     onChange={(e) => setEditingClient({ ...editingClient, address: e.target.value })}
                                     style={{ ...styles.input, height: '80px' }}
                                 />
