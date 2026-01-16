@@ -121,14 +121,34 @@ enum ParcelStatus {
 // CONTENEURS
 // ======================
 
-model Container {
-  id       String    @id @default(uuid())
-  name     String    @unique
-  closed   Boolean   @default(false)
-  closedAt DateTime?
+enum ContainerLoadingStatus {
+  UNKNOWN
+  NOT_STARTED
+  PARTIALLY_LOADED
+  FULLY_LOADED
+  SEALED
+}
 
-  parcels   Parcel[]
-  createdAt DateTime @default(now())
+enum ContainerUnloadingStatus {
+  UNKNOWN
+  NOT_STARTED
+  PARTIALLY_UNLOADED
+  FULLY_UNLOADED
+  SEALED
+}
+
+model Container {
+  id                String                   @id @default(uuid())
+  name              String                   @unique
+  departureDate     DateTime?
+  arrivalDate       DateTime?
+  loadingStatus     ContainerLoadingStatus   @default(UNKNOWN)
+  unloadingStatus   ContainerUnloadingStatus @default(UNKNOWN)
+  closed            Boolean                  @default(false)
+  closedAt          DateTime?
+
+  parcels           Parcel[]
+  createdAt         DateTime                 @default(now())
 
   @@map("containers")
 }
