@@ -33,9 +33,19 @@ export function useContainers() {
         return response.data;
     };
 
+    const updateContainer = async (id: string, data: Partial<Container>) => {
+        await api.put(`/containers/${id}`, data);
+        await fetchContainers();
+    };
+
+    const deleteContainer = async (id: string) => {
+        await api.delete(`/containers/${id}`);
+        await fetchContainers();
+    };
+
     useEffect(() => {
         fetchContainers();
     }, []);
 
-    return { containers, loading, error, addContainer, getNextName };
+    return { containers, loading, error, addContainer, getNextName, updateContainer, deleteContainer };
 }

@@ -67,4 +67,25 @@ export class ContainerService {
 
         return `CONT-${nextNumber.toString().padStart(3, '0')}`;
     }
+
+    async update(id: string, updateData: any) {
+        const { name, departureDate, arrivalDate, loadingStatus, unloadingStatus } = updateData;
+
+        return this.prisma.container.update({
+            where: { id },
+            data: {
+                name,
+                departureDate: departureDate ? new Date(departureDate) : null,
+                arrivalDate: arrivalDate ? new Date(arrivalDate) : null,
+                loadingStatus,
+                unloadingStatus,
+            },
+        });
+    }
+
+    async remove(id: string) {
+        return this.prisma.container.delete({
+            where: { id },
+        });
+    }
 }

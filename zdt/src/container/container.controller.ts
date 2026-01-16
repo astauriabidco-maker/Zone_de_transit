@@ -1,5 +1,5 @@
 // src/container/container.controller.ts
-import { Controller, Get, Post, Body } from '@nestjs/common';
+import { Controller, Get, Post, Body, Put, Delete, Param } from '@nestjs/common';
 import { ContainerService } from './container.service';
 import { CreateContainerDto } from './dto/create-container.dto';
 
@@ -20,5 +20,15 @@ export class ContainerController {
     @Get('next-name')
     getNextName() {
         return this.containerService.getNextName();
+    }
+
+    @Put(':id')
+    update(@Param('id') id: string, @Body() updateData: any) {
+        return this.containerService.update(id, updateData);
+    }
+
+    @Delete(':id')
+    remove(@Param('id') id: string) {
+        return this.containerService.remove(id);
     }
 }

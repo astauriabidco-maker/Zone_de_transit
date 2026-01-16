@@ -21,7 +21,10 @@ const UNLOADING_STATUS_LABELS: Record<Container['unloadingStatus'], string> = {
 };
 
 export default function ContainersPage() {
-    const { containers, loading, error, addContainer, getNextName } = useContainers();
+    const { containers, loading, error, addContainer, getNextName, updateContainer, deleteContainer } = useContainers();
+    const [menuPosition, setMenuPosition] = useState<{ id: string; x: number; y: number } | null>(null);
+    const [editingContainer, setEditingContainer] = useState<Container | null>(null);
+    const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
     const [initialName, setInitialName] = useState('');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [formData, setFormData] = useState<Omit<Container, 'id' | 'closed' | 'createdAt'>>({
@@ -33,6 +36,23 @@ export default function ContainersPage() {
     });
     const [submitError, setSubmitError] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
+
+    // Ferme le menu si on clique en dehors
+    useEffect(() => {
+        const handleClickOutside = () => {
+            if (menuPosition) {
+                setMenuPosition(null);
+            }
+        };
+
+        if (menuPosition) {
+            document.addEventListener('click', handleClickOutside);
+        }
+
+        return () => {
+            document.removeEventListener('click', handleClickOutside);
+        };
+    }, [menuPosition]);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
@@ -111,6 +131,7 @@ export default function ContainersPage() {
                             <th style={styles.th}>ARRIVÉE PRÉVUE</th>
                             <th style={styles.th}>CHARGEMENT</th>
                             <th style={styles.th}>DÉCHARGEMENT</th>
+                            <th style={styles.th}>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -121,6 +142,57 @@ export default function ContainersPage() {
                                 <td style={styles.td}>{container.arrivalDate || '—'}</td>
                                 <td style={styles.td}>{LOADING_STATUS_LABELS[container.loadingStatus]}</td>
                                 <td style={styles.td}>{UNLOADING_STATUS_LABELS[container.unloadingStatus]}</td>
+                                {/* Colonne Actions */}
+                                <td style={{ ...styles.td, padding: '8px' }}>
+                                    <div style={{ position: 'relative', display: 'flex', justifyContent: 'flex-end' }}>
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                const rect = e.currentTarget.getBoundingClientRect();
+                                                // Affiche le menu juste en dessous du bouton
+                                                setMenuPosition({
+                                                    id: container.id,
+                                                    x: rect.left,
+                                                    y: rect.bottom + window.scrollY,
+                                                });
+                                            }}
+                                            style={styles.menuButton}
+                                        >
+                                            ⋮
+                                        </button>
+
+                                        {/* Menu déroulant (hors du tableau) */}
+                                        {menuPosition && menuPosition.id === container.id && (
+                                            <div
+                                                style={{
+                                                    ...styles.menuDropdown,
+                                                    top: `${menuPosition.y}px`,
+                                                    left: `${menuPosition.x}px`,
+                                                    zIndex: 1000,
+                                                }}
+                                            >
+                                                <button
+                                                    onClick={() => {
+                                                        setEditingContainer(container);
+                                                        setMenuPosition(null);
+                                                    }}
+                                                    style={styles.menuItem}
+                                                >
+                                                    ✏️ Modifier
+                                                </button>
+                                                <button
+                                                    onClick={() => {
+                                                        setDeleteConfirmId(container.id);
+                                                        setMenuPosition(null);
+                                                    }}
+                                                    style={{ ...styles.menuItem, color: '#ef4444' }}
+                                                >
+                                                    🗑️ Supprimer
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+                                </td>
                             </tr>
                         ))}
                     </tbody>
@@ -227,12 +299,177 @@ export default function ContainersPage() {
                     </div>
                 </div>
             )}
+
+            {/* Modal de confirmation de suppression */}
+            {deleteConfirmId && (
+                <div style={styles.modalOverlay}>
+                    <div style={styles.confirmModal}>
+                        <h3 style={{ margin: 0 }}>Confirmer la suppression</h3>
+                        <p>Êtes-vous sûr de vouloir supprimer ce conteneur ? Cette action est irréversible.</p>
+                        <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '20px' }}>
+                            <button
+                                onClick={() => setDeleteConfirmId(null)}
+                                style={styles.cancelButton}
+                            >
+                                Annuler
+                            </button>
+                            <button
+                                onClick={async () => {
+                                    await deleteContainer(deleteConfirmId);
+                                    setDeleteConfirmId(null);
+                                }}
+                                style={{ ...styles.addButton, padding: '8px 16px' }}
+                            >
+                                Supprimer
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal d'édition */}
+            {editingContainer && (
+                <div style={styles.modalOverlay}>
+                    <div style={styles.modal}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                            <h3 style={{ fontSize: '18px', fontWeight: '600' }}>Modifier le conteneur</h3>
+                            <button
+                                onClick={() => setEditingContainer(null)}
+                                style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer' }}
+                            >
+                                ✕
+                            </button>
+                        </div>
+
+                        <form onSubmit={async (e) => {
+                            e.preventDefault();
+                            if (!editingContainer) return;
+                            try {
+                                await updateContainer(editingContainer.id, editingContainer);
+                                setEditingContainer(null);
+                            } catch (err: any) {
+                                alert(err.message);
+                            }
+                        }}>
+                            <div style={{ marginBottom: '16px' }}>
+                                <label style={styles.label}>Nom du conteneur</label>
+                                <input
+                                    type="text"
+                                    value={editingContainer.name}
+                                    onChange={(e) => setEditingContainer({ ...editingContainer, name: e.target.value })}
+                                    required
+                                    style={styles.input}
+                                />
+                            </div>
+
+                            <div style={{ marginBottom: '16px' }}>
+                                <label style={styles.label}>Date de départ prévue</label>
+                                <input
+                                    type="date"
+                                    value={editingContainer.departureDate || ''}
+                                    onChange={(e) => setEditingContainer({ ...editingContainer, departureDate: e.target.value })}
+                                    style={styles.input}
+                                />
+                            </div>
+
+                            <div style={{ marginBottom: '16px' }}>
+                                <label style={styles.label}>Date d'arrivée prévue</label>
+                                <input
+                                    type="date"
+                                    value={editingContainer.arrivalDate || ''}
+                                    onChange={(e) => setEditingContainer({ ...editingContainer, arrivalDate: e.target.value })}
+                                    style={styles.input}
+                                />
+                            </div>
+
+                            <div style={{ marginBottom: '16px' }}>
+                                <label style={styles.label}>État du chargement</label>
+                                <select
+                                    value={editingContainer.loadingStatus}
+                                    onChange={(e) => setEditingContainer({ ...editingContainer, loadingStatus: e.target.value as any })}
+                                    style={styles.input}
+                                >
+                                    {Object.entries(LOADING_STATUS_LABELS).map(([key, label]) => (
+                                        <option key={key} value={key}>{label}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div style={{ marginBottom: '16px' }}>
+                                <label style={styles.label}>État du déchargement</label>
+                                <select
+                                    value={editingContainer.unloadingStatus}
+                                    onChange={(e) => setEditingContainer({ ...editingContainer, unloadingStatus: e.target.value as any })}
+                                    style={styles.input}
+                                >
+                                    {Object.entries(UNLOADING_STATUS_LABELS).map(([key, label]) => (
+                                        <option key={key} value={key}>{label}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                                <button
+                                    type="button"
+                                    onClick={() => setEditingContainer(null)}
+                                    style={styles.cancelButton}
+                                >
+                                    Annuler
+                                </button>
+                                <button
+                                    type="submit"
+                                    style={{ ...styles.addButton, padding: '10px 20px' }}
+                                >
+                                    Enregistrer
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
 
 // Styles identiques à ClientsPage.tsx
 const styles = {
+
+    menuButton: {
+        background: 'none',
+        border: 'none',
+        fontSize: '18px',
+        cursor: 'pointer',
+        padding: '4px',
+    } as const,
+
+    menuDropdown: {
+        backgroundColor: 'white',
+        border: '1px solid #cbd5e1',
+        borderRadius: '8px',
+        boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+        width: '160px',
+        zIndex: 1000,
+    } as const,
+
+    menuItem: {
+        width: '100%',
+        padding: '10px 16px',
+        textAlign: 'left',
+        background: 'none',
+        border: 'none',
+        cursor: 'pointer',
+        fontSize: '14px',
+        color: '#1e293b',
+    } as const,
+
+    confirmModal: {
+        backgroundColor: 'white',
+        borderRadius: '12px',
+        padding: '24px',
+        width: '400px',
+        maxWidth: '90vw',
+    } as const,
+
     exportButton: {
         padding: '8px 16px',
         backgroundColor: 'white',
